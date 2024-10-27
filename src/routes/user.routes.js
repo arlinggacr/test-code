@@ -3,15 +3,15 @@ const router = express.Router();
 const userController = require("../controllers/user.controller");
 const authMiddleware = require("../middlewares/auth.middleware");
 
-router.post("/", authMiddleware, userController.createUser);
 router.get("/", userController.getAllUser);
+
+router.post("/", authMiddleware, userController.createUser);
 
 router.get(
   "/account/:id",
   authMiddleware,
   userController.getUserByAccountNumber
 );
-
 router.get(
   "/identity/:id",
   authMiddleware,

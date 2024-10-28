@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const User = require("../models/User.model");
+const redisClient = require("../helpers/redisClient");
 
 const register = async (req, res) => {
   try {
@@ -60,10 +61,10 @@ const createUser = async (req, res) => {
 };
 const getUserByAccountNumber = async (req, res) => {
   try {
-    const user = await User.findOne({
-      accountNumber: req.params.id,
-    });
+    const accountNumber = req.params.id;
+    const user = await User.findOne({ accountNumber });
     if (!user) return res.status(404).json({ msg: "User not found" });
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -72,10 +73,10 @@ const getUserByAccountNumber = async (req, res) => {
 
 const getUserByIdentityNumber = async (req, res) => {
   try {
-    const user = await User.findOne({
-      identityNumber: req.params.id,
-    });
+    const identityNumber = req.params.id;
+    const user = await User.findOne({ identityNumber });
     if (!user) return res.status(404).json({ msg: "User not found" });
+
     res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -83,21 +84,40 @@ const getUserByIdentityNumber = async (req, res) => {
 };
 
 const getAllUser = async (req, res) => {
-  try {
-    const user = await User.find();
+  redisClient.get("users", async (err, cachedUsers) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Internal Server Error" });
+    }
 
-    const result = user.map((e) => ({
-      id: e._id,
-      username: e.userName,
-      account_number: e.accountNumber,
-      email: e.emailAddress,
-      id_number: e.identityNumber,
-    }));
+    if (cachedUsers) {
+      return res.json(JSON.parse(cachedUsers));
+    }
 
-    res.json(result);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
+    try {
+      redisClient.on("connect", () => {
+        console.log("Connected to Redis...");
+      });
+      const users = await User.find();
+
+      const result = users.map((e) => ({
+        id: e._id,
+        username: e.userName,
+        account_number: e.accountNumber,
+        email: e.emailAddress,
+        id_number: e.identityNumber,
+      }));
+
+      redisClient.setex("users", 3600, JSON.stringify(result));
+
+      res.json(result);
+    } catch (error) {
+      redisClient.on("error", (err) => {
+        console.error("Redis error:", err);
+      });
+      res.status(500).json({ error: error.message });
+    }
+  });
 };
 
 const updateUser = async (req, res) => {

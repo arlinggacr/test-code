@@ -1,19 +1,14 @@
-// bin/www
 const app = require("../src/app");
 const http = require("http");
 
-// Use environment port or default to 5000
 const PORT = process.env.PORT || 3030;
 
-// Create HTTP server
 const server = http.createServer(app);
 
-// Start listening on the specified port
 server.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-// Handle errors
 server.on("error", (error) => {
   if (error.syscall !== "listen") {
     throw error;
@@ -21,7 +16,6 @@ server.on("error", (error) => {
 
   const bind = typeof PORT === "string" ? `Pipe ${PORT}` : `Port ${PORT}`;
 
-  // Handle specific listen errors
   switch (error.code) {
     case "EACCES":
       console.error(`${bind} requires elevated privileges`);
